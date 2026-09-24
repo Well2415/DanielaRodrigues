@@ -14,9 +14,9 @@
   }
   *{box-sizing:border-box;}
   body{
-    background:var(--paper); color:var(--ink);
+    background:#F5F5F3; color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
-    padding:20px; padding-bottom:80px; max-width:900px; margin-inline:auto;
+    padding:20px; padding-bottom:40px; max-width:900px; margin-inline:auto;
     font-size:15px; line-height:1.5;
   }
   h1,h2,h3{margin:0; font-weight:700;}
@@ -24,50 +24,72 @@
   button, input, textarea{font-family:inherit; -webkit-tap-highlight-color:transparent;}
   button:focus, input:focus, textarea:focus{outline:none;}
   input, textarea{
-    width:100%; border:1px solid var(--line); border-radius:4px; padding:8px 10px;
+    width:100%; border:1px solid var(--line); border-radius:6px; padding:9px 11px;
     font-size:14px; color:var(--ink); background:var(--paper);
+    transition:border-color .15s ease;
   }
+  input:focus, textarea:focus{border-color:#999;}
   textarea{resize:vertical; min-height:64px;}
   label{display:block; font-size:11.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--muted); margin-bottom:4px;}
   .field{margin-bottom:12px;}
   .btn{
-    appearance:none; border:1px solid var(--btn-bg); cursor:pointer; border-radius:4px;
+    appearance:none; border:1px solid var(--btn-bg); cursor:pointer; border-radius:6px;
     padding:9px 16px; font-size:13.5px; font-weight:600; background:var(--btn-bg); color:var(--btn-ink);
+    transition:opacity .15s ease, transform .1s ease;
   }
-  .btn:active{opacity:.8;}
+  .btn:hover{opacity:.88;}
+  .btn:active{opacity:.75; transform:scale(.98);}
   .btn-outline{background:transparent; color:var(--ink); border-color:var(--line);}
+  .btn-outline:hover{background:#f0f0ee; opacity:1;}
   .btn-danger{background:var(--paper); color:var(--danger); border-color:var(--danger);}
+  .btn-danger:hover{background:#fdf1f0; opacity:1;}
   .btn-sm{padding:5px 10px; font-size:12.5px;}
 
   /* ---------- login ---------- */
   #loginScreen{
-    min-height:80vh; display:flex; align-items:center; justify-content:center;
+    min-height:88vh; display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:22px;
   }
-  .login-box{width:min(90vw,340px); border:1px solid var(--line); border-radius:8px; padding:28px 24px;}
-  .login-box h1{font-size:18px; margin-bottom:4px;}
-  .login-box .sub{color:var(--muted); font-size:13px; margin-bottom:20px;}
-  .login-error{color:var(--danger); font-size:13px; margin-top:10px; min-height:18px;}
+  .login-logo{height:96px; width:auto; max-width:80vw;}
+  .login-box{
+    width:min(90vw,340px); background:var(--paper); border:1px solid var(--line);
+    border-radius:12px; padding:30px 26px; box-shadow:0 4px 18px rgba(0,0,0,.06);
+  }
+  .login-box h1{font-size:18px; margin-bottom:4px; text-align:center;}
+  .login-box .sub{color:var(--muted); font-size:13px; margin-bottom:22px; text-align:center;}
+  .login-error{color:var(--danger); font-size:13px; margin-top:10px; min-height:18px; text-align:center;}
+  .login-footer{color:var(--muted); font-size:11.5px; text-align:center; max-width:320px;}
 
   /* ---------- shell ---------- */
   #panelScreen{display:none;}
   header.top{
     display:flex; align-items:center; justify-content:space-between; gap:12px;
-    padding-bottom:16px; margin-bottom:18px; border-bottom:1px solid var(--line);
+    padding-bottom:18px; margin-bottom:20px; border-bottom:1px solid var(--line);
   }
-  header.top h1{font-size:18px;}
-  header.top .actions{display:flex; align-items:center; gap:10px;}
-  header.top a{color:var(--muted); font-size:13px; text-decoration:underline;}
+  header.top .brand{display:flex; align-items:center; gap:12px;}
+  header.top .brand img{height:44px; width:auto; display:block;}
+  header.top .brand-text .eyebrow{font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:700;}
+  header.top h1{font-size:17px;}
+  header.top .actions{display:flex; align-items:center; gap:14px;}
+  header.top a{color:var(--muted); font-size:13px; text-decoration:none; border-bottom:1px solid var(--line); padding-bottom:1px; transition:color .15s ease, border-color .15s ease;}
+  header.top a:hover{color:var(--ink); border-color:var(--ink);}
 
-  .tabs{display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap;}
+  .tabs{display:flex; gap:8px; margin-bottom:22px; flex-wrap:wrap;}
   .tab-btn{
     appearance:none; border:1px solid var(--line); background:var(--paper); color:var(--muted);
-    border-radius:20px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer;
+    border-radius:20px; padding:7px 15px; font-size:13px; font-weight:600; cursor:pointer;
+    transition:background .15s ease, color .15s ease, border-color .15s ease;
   }
+  .tab-btn:hover{border-color:#bbb; color:var(--ink);}
   .tab-btn.active{background:var(--btn-bg); color:var(--btn-ink); border-color:var(--btn-bg);}
+  .tab-btn.active:hover{color:var(--btn-ink);}
   .tab-panel{display:none;}
   .tab-panel.active{display:block;}
 
-  .card{border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:16px;}
+  .card{
+    background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:18px;
+    margin-bottom:16px; box-shadow:0 1px 4px rgba(0,0,0,.04);
+  }
   .card-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px;}
   .card-head h3{font-size:15px;}
   .row2{display:grid; grid-template-columns:1fr 140px; gap:12px;}
@@ -75,12 +97,14 @@
   @media (max-width:520px){ .row2, .row3{grid-template-columns:1fr;} }
 
   .photo-grid{display:flex; flex-wrap:wrap; gap:10px; margin:10px 0;}
-  .photo-item{position:relative; width:84px; height:84px; border-radius:4px; overflow:hidden; border:1px solid var(--line);}
+  .photo-item{position:relative; width:84px; height:84px; border-radius:6px; overflow:hidden; border:1px solid var(--line);}
   .photo-item img{width:100%; height:100%; object-fit:cover; display:block;}
   .photo-item button{
-    position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%;
+    position:absolute; top:3px; right:3px; width:20px; height:20px; border-radius:50%;
     background:rgba(0,0,0,.65); color:#fff; border:none; font-size:12px; line-height:1; cursor:pointer;
+    transition:background .15s ease;
   }
+  .photo-item button:hover{background:rgba(179,38,30,.9);}
   .upload-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
   .upload-row input[type=file]{width:auto; border:none; padding:0; font-size:13px;}
 
@@ -89,7 +113,8 @@
   .save-msg.ok{color:#1a7d34;}
   .save-msg.err{color:var(--danger);}
 
-  .add-card{border:1px dashed var(--line); border-radius:8px; padding:16px; margin-bottom:16px;}
+  .add-card{border:1px dashed #bbb; border-radius:10px; padding:18px; margin-bottom:16px; background:#FAFAF8;}
+  .add-card h3{color:var(--muted); letter-spacing:.02em;}
   .muted{color:var(--muted); font-size:13px;}
   #loadingNote{color:var(--muted); font-size:13px; padding:20px 0;}
 </style>
@@ -97,6 +122,7 @@
 <body>
 
 <div id="loginScreen">
+  <img class="login-logo" src="fotos/logo.png" alt="Daniela Rodrigues Fotografia">
   <form class="login-box" id="loginForm">
     <h1>Painel administrativo</h1>
     <p class="sub">Daniela Rodrigues Fotografia</p>
@@ -111,11 +137,18 @@
     <button class="btn" style="width:100%" type="submit">Entrar</button>
     <p class="login-error" id="loginError"></p>
   </form>
+  <p class="login-footer" id="copyrightText"></p>
 </div>
 
 <div id="panelScreen">
   <header class="top">
-    <h1>Painel administrativo</h1>
+    <div class="brand">
+      <img src="fotos/logo.png" alt="Daniela Rodrigues Fotografia">
+      <div class="brand-text">
+        <div class="eyebrow">Daniela Rodrigues Fotografia</div>
+        <h1>Painel administrativo</h1>
+      </div>
+    </div>
     <div class="actions">
       <a href="index.html" target="_blank">Ver site</a>
       <button class="btn btn-outline btn-sm" id="logoutBtn" type="button">Sair</button>
@@ -198,6 +231,9 @@
   var PHOTOS_BUCKET = "fotos";
 
   var sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  document.getElementById("copyrightText").textContent =
+    "© " + new Date().getFullYear() + " Daniela Rodrigues Fotografia — Todos os direitos reservados.";
 
   var loginScreen = document.getElementById("loginScreen");
   var panelScreen = document.getElementById("panelScreen");
