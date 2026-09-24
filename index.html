@@ -364,13 +364,13 @@
     {id:"caneca",        name:"Caneca personalizada",        price:45,  unit:"un"}
   ];
 
-  var PRODUCT_OBS_PRODUCAO = "A cada 5 fotos adicionais, será permitido mais 1 produção, limite máximo de 3 produções por ensaio. Para fotos adicionais não tem limite.";
+  var PRODUCT_OBS_PRODUCAO = "A Cada 5 fotos adicionais, será permitido mais 1 produção, limite máximo de 3 produções por ensaio. Para fotos adicionais não tem limite.";
 
   var PRODUCTS = [
     {
       id:"newborn", name:"Newborn", basePhotos:5, basePrice:400,
       included:["5 Fotos Digitais","1 produção (cenário) com o bebê","Participação dos pais e irmãos (se tiver)"],
-      obs:"A cada 5 fotos adicionais, acrescentamos mais 1 produção, limite máximo de 3 produções por ensaio. Para fotos adicionais não tem limite."
+      obs:"A Cada 5 fotos adicionais, acrescentamos mais 1 produção, limite máximo de 3 produções por ensaio. Para fotos adicionais não tem limite."
     },
     {
       id:"gestante", name:"Gestante", basePhotos:5, basePrice:300,
@@ -380,12 +380,12 @@
     {
       id:"infantil", name:"Infantil", basePhotos:5, basePrice:250,
       included:["5 Fotos Digitais","1 produção (cenário) com a criança","Participação dos pais e irmãos (se tiver)"],
-      obs:"A cada 5 fotos adicionais, acrescentamos mais 1 produção, limite máximo de 3 produções por ensaio. Para fotos adicionais não tem limite."
+      obs:"A Cada 5 fotos adicionais, acrescentamos mais 1 produção, limite máximo de 3 produções por ensaio. Para fotos adicionais não tem limite."
     },
     {
       id:"smash", name:"Smash the Cake", basePhotos:5, basePrice:400,
       included:["5 Fotos Digitais","1 produção (cenário com balões)","Bolo (glacê ou frutas)","Participação dos pais e irmãos (se tiver)"],
-      obs:"No acréscimo de 5 fotos adicionais, acrescentamos mais 1 produção com o banho na banheira. Para fotos adicionais não tem limite."
+      obs:"no acréscimo de 5 fotos adicionais, acrescentamos mais 1 produção com o banho na banheira. Para fotos adicionais não tem limite."
     },
     {
       id:"familia", name:"Família", basePhotos:5, basePrice:300,
@@ -454,7 +454,7 @@
         '</div>'+
         '<div class="item-main">'+
           '<h2>'+p.name+'</h2>'+
-          '<p class="desc">'+p.included.slice(1).join(" · ")+'</p>'+
+          '<p class="desc">'+p.obs+'</p>'+
           '<p class="meta">'+p.basePhotos+' fotos digitais</p>'+
         '</div>'+
         '<div class="item-side">'+
