@@ -82,6 +82,7 @@
   .gallery-tile{
     aspect-ratio:1; border-radius:4px; border:1px solid var(--line); background:#EDEDED;
     display:flex; align-items:center; justify-content:center; overflow:hidden;
+    padding:0; cursor:pointer; font:inherit; color:inherit; appearance:none;
   }
   .gallery-tile img{width:100%; height:100%; object-fit:cover; object-position:center top; display:block;}
   .gallery-tile svg{width:26px; height:26px; opacity:.4;}
@@ -115,6 +116,8 @@
   }
   .sheet-head h2{font-size:16px;}
   .sheet-head .sub{color:var(--muted); font-size:13px; margin-top:4px;}
+  .sheet-head-actions{display:flex; align-items:center; gap:14px;}
+  .link-btn{background:none; border:none; color:var(--muted); font-size:12px; text-decoration:underline; cursor:pointer; padding:0; font-family:inherit;}
   .icon-btn{
     background:transparent; border:1px solid var(--line); cursor:pointer; color:var(--ink);
     width:26px; height:26px; border-radius:4px; display:flex; align-items:center; justify-content:center;
@@ -163,7 +166,25 @@
   .cart-item-head .price{font-weight:600; white-space:nowrap; font-size:13.5px;}
   .cart-item ul{margin:6px 0 0; padding-left:16px; color:var(--muted); font-size:12.5px; line-height:1.6;}
   .cart-item-actions{display:flex; gap:16px; margin-top:8px;}
-  .cart-item-actions button{background:none; border:none; color:var(--muted); font-size:12px; text-decoration:underline; cursor:pointer; padding:0;}
+
+  /* ---------- lightbox ---------- */
+  dialog.lightbox{width:100vw; height:100vh; max-width:100vw; max-height:100vh; margin:0; background:transparent;}
+  .lightbox-sheet{
+    width:100%; height:100%; background:rgba(10,10,10,.94);
+    display:flex; align-items:center; justify-content:center; position:relative;
+    touch-action:pan-y;
+  }
+  .lightbox-img{max-width:90vw; max-height:80vh; object-fit:contain; display:block; user-select:none; -webkit-user-select:none;}
+  .lightbox-close, .lightbox-nav{
+    position:absolute; appearance:none; cursor:pointer;
+    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.35); color:#fff;
+    border-radius:50%; display:flex; align-items:center; justify-content:center; line-height:1;
+  }
+  .lightbox-close{top:14px; right:14px; width:32px; height:32px; font-size:15px;}
+  .lightbox-nav{top:50%; transform:translateY(-50%); width:46px; height:46px; font-size:26px;}
+  .lightbox-prev{left:10px;}
+  .lightbox-next{right:10px;}
+  .lightbox-counter{position:absolute; bottom:18px; left:50%; transform:translateX(-50%); color:rgba(255,255,255,.85); font-size:12px; letter-spacing:.02em;}
 
   @media (max-width:480px){
     .item{flex-direction:column; align-items:stretch;}
@@ -256,11 +277,24 @@
   </div>
 </dialog>
 
+<dialog class="lightbox" id="lightboxDialog">
+  <div class="lightbox-sheet">
+    <button class="lightbox-close" id="lightboxClose" aria-label="Fechar" type="button">✕</button>
+    <button class="lightbox-nav lightbox-prev" id="lightboxPrev" aria-label="Foto anterior" type="button">‹</button>
+    <img class="lightbox-img" id="lightboxImg" src="" alt="">
+    <button class="lightbox-nav lightbox-next" id="lightboxNext" aria-label="Próxima foto" type="button">›</button>
+    <div class="lightbox-counter" id="lightboxCounter"></div>
+  </div>
+</dialog>
+
 <dialog class="cart" id="cartDialog">
   <div class="sheet">
     <div class="sheet-head">
       <h2>Seu pedido</h2>
-      <button class="icon-btn" id="cartClose" aria-label="Fechar" type="button">✕</button>
+      <div class="sheet-head-actions">
+        <button class="link-btn" id="cartClear" type="button">Esvaziar</button>
+        <button class="icon-btn" id="cartClose" aria-label="Fechar" type="button">✕</button>
+      </div>
     </div>
     <div class="sheet-body" id="cartList"></div>
     <div class="sheet-foot" style="flex-direction:column; align-items:stretch; gap:12px;">
@@ -432,14 +466,65 @@
     var count = (PHOTOS[productId] || []).length || 3;
     var tiles = [];
     for (var i = 0; i < count; i++){
-      tiles.push('<div class="gallery-tile">'+photoTile(productId, i)+'</div>');
+      var hasPhoto = !!(PHOTOS[productId] || [])[i];
+      tiles.push('<button class="gallery-tile" type="button" data-index="'+i+'" aria-label="Ampliar foto '+(i+1)+' de '+p.name+'"'+(hasPhoto?'':' disabled')+'>'+photoTile(productId, i)+'</button>');
     }
     galleryGrid.innerHTML = tiles.join("");
+    galleryGrid.querySelectorAll("[data-index]").forEach(function(btn){
+      btn.addEventListener("click", function(){ openLightbox(productId, parseInt(btn.getAttribute("data-index"),10)); });
+    });
     if (typeof galleryDialog.showModal === "function") galleryDialog.showModal();
   }
 
   document.getElementById("galleryClose").addEventListener("click", function(){ galleryDialog.close(); });
   galleryDialog.addEventListener("click", function(e){ if (e.target === galleryDialog) galleryDialog.close(); });
+
+  var lightboxDialog = document.getElementById("lightboxDialog");
+  var lightboxImg = document.getElementById("lightboxImg");
+  var lightboxCounter = document.getElementById("lightboxCounter");
+  var lightboxPhotos = [];
+  var lightboxIndex = 0;
+
+  function openLightbox(productId, index){
+    lightboxPhotos = PHOTOS[productId] || [];
+    if (!lightboxPhotos[index]) return;
+    lightboxIndex = index;
+    renderLightbox();
+    if (typeof lightboxDialog.showModal === "function") lightboxDialog.showModal();
+  }
+
+  function renderLightbox(){
+    lightboxImg.src = lightboxPhotos[lightboxIndex];
+    lightboxCounter.textContent = (lightboxIndex+1)+" / "+lightboxPhotos.length;
+  }
+
+  function lightboxStep(delta){
+    if (!lightboxPhotos.length) return;
+    lightboxIndex = (lightboxIndex + delta + lightboxPhotos.length) % lightboxPhotos.length;
+    renderLightbox();
+  }
+
+  document.getElementById("lightboxPrev").addEventListener("click", function(){ lightboxStep(-1); });
+  document.getElementById("lightboxNext").addEventListener("click", function(){ lightboxStep(1); });
+  document.getElementById("lightboxClose").addEventListener("click", function(){ lightboxDialog.close(); });
+  lightboxDialog.addEventListener("click", function(e){ if (e.target === lightboxDialog) lightboxDialog.close(); });
+
+  document.addEventListener("keydown", function(e){
+    if (!lightboxDialog.open) return;
+    if (e.key === "ArrowLeft") lightboxStep(-1);
+    else if (e.key === "ArrowRight") lightboxStep(1);
+  });
+
+  var lightboxTouchX = null;
+  lightboxDialog.addEventListener("touchstart", function(e){
+    lightboxTouchX = e.touches[0].clientX;
+  }, {passive:true});
+  lightboxDialog.addEventListener("touchend", function(e){
+    if (lightboxTouchX === null) return;
+    var dx = e.changedTouches[0].clientX - lightboxTouchX;
+    if (Math.abs(dx) > 40) lightboxStep(dx < 0 ? 1 : -1);
+    lightboxTouchX = null;
+  });
 
   function openPanel(productId, editIndex){
     activeProduct = PRODUCTS.filter(function(p){return p.id===productId;})[0];
@@ -544,8 +629,8 @@
         '<div class="cart-item-head"><span class="name">'+item.name+' ('+item.basePhotos+' fotos)</span><span class="price">'+money(item.total)+'</span></div>'+
         addonsHtml+
         '<div class="cart-item-actions">'+
-          '<button data-edit="'+idx+'" type="button">Editar</button>'+
-          '<button data-remove="'+idx+'" type="button">Remover</button>'+
+          '<button class="link-btn" data-edit="'+idx+'" type="button">Editar</button>'+
+          '<button class="link-btn" data-remove="'+idx+'" type="button">Remover</button>'+
         '</div>'+
       '</div>';
     }).join("");
@@ -567,6 +652,12 @@
   cartFab.addEventListener("click", function(){ if (cartDialog.showModal) cartDialog.showModal(); });
   document.getElementById("cartClose").addEventListener("click", function(){ cartDialog.close(); });
   document.getElementById("cartAddMore").addEventListener("click", function(){ cartDialog.close(); });
+  document.getElementById("cartClear").addEventListener("click", function(){
+    if (!cart.length) return;
+    if (!confirm("Esvaziar todos os itens do pedido?")) return;
+    cart = [];
+    renderCart();
+  });
   cartDialog.addEventListener("click", function(e){ if (e.target === cartDialog) cartDialog.close(); });
 
   document.getElementById("waBtn").addEventListener("click", function(){
