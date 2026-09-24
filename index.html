@@ -22,6 +22,10 @@
   }
 
   *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto;}
+  }
   body{
     background:var(--paper);
     color:var(--ink);
@@ -62,6 +66,11 @@
   .item{
     display:flex; justify-content:space-between; align-items:flex-start; gap:14px;
     padding:18px 0; border-bottom:1px solid var(--line);
+  }
+  .reveal{opacity:0; transform:translateY(18px); transition:opacity .6s ease, transform .6s ease;}
+  .reveal.is-visible{opacity:1; transform:none;}
+  @media (prefers-reduced-motion:reduce){
+    .reveal{opacity:1; transform:none; transition:none;}
   }
   .item-photos{display:flex; flex-direction:column; gap:0; flex-shrink:0;}
   .thumb{
@@ -433,9 +442,18 @@
   var cartList = document.getElementById("cartList");
   var cartTotal = document.getElementById("cartTotal");
 
+  var revealObserver = ("IntersectionObserver" in window) ? new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if (entry.isIntersecting){
+        entry.target.classList.add("is-visible");
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, {threshold:0.12, rootMargin:"0px 0px -40px 0px"}) : null;
+
   function renderGrid(){
     grid.innerHTML = PRODUCTS.map(function(p){
-      return '<div class="item">'+
+      return '<div class="item reveal">'+
         '<div class="item-photos">'+
           '<button class="thumb" data-gallery="'+p.id+'" type="button" aria-label="Ver fotos de exemplo de '+p.name+'">'+photoTile(p.id,0)+'</button>'+
           '<button class="thumb-link" data-gallery="'+p.id+'" type="button">ver fotos</button>'+
@@ -457,6 +475,11 @@
     grid.querySelectorAll("[data-gallery]").forEach(function(btn){
       btn.addEventListener("click", function(){ openGallery(btn.getAttribute("data-gallery")); });
     });
+    if (revealObserver){
+      grid.querySelectorAll(".reveal").forEach(function(el){ revealObserver.observe(el); });
+    } else {
+      grid.querySelectorAll(".reveal").forEach(function(el){ el.classList.add("is-visible"); });
+    }
   }
 
   var galleryDialog = document.getElementById("galleryDialog");
