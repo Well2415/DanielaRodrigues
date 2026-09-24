@@ -35,7 +35,9 @@
   }
   h1,h2{margin:0; font-weight:700;}
   p{margin:0;}
-  button{font-family:inherit;}
+  button{font-family:inherit; -webkit-tap-highlight-color:transparent;}
+  button:focus{outline:none;}
+  button:focus-visible{outline:2px solid #4A90E2; outline-offset:2px;}
 
   .brand-band{
     display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -102,7 +104,7 @@
   footer a:hover, footer a:active{text-decoration:underline;}
 
   /* ---------- dialogs ---------- */
-  dialog{border:none; padding:0; background:transparent; margin:auto; color:var(--ink);}
+  dialog{border:none; padding:0; background:transparent; margin:auto; color:var(--ink); outline:none;}
   dialog::backdrop{background:rgba(0,0,0,.45);}
   .sheet{
     background:var(--paper); color:var(--ink); border:1px solid var(--line); border-radius:6px;
@@ -475,7 +477,7 @@
     galleryGrid.querySelectorAll("[data-index]").forEach(function(btn){
       btn.addEventListener("click", function(){ openLightbox(productId, parseInt(btn.getAttribute("data-index"),10)); });
     });
-    if (typeof galleryDialog.showModal === "function") galleryDialog.showModal();
+    openDialog(galleryDialog);
   }
 
   document.getElementById("galleryClose").addEventListener("click", function(){ galleryDialog.close(); });
@@ -487,12 +489,26 @@
   var lightboxPhotos = [];
   var lightboxIndex = 0;
 
+  var allDialogs = [panelDialog, galleryDialog, lightboxDialog, cartDialog];
+
+  function syncBodyScrollLock(){
+    var anyOpen = allDialogs.some(function(d){ return d.open; });
+    document.body.style.overflow = anyOpen ? "hidden" : "";
+  }
+
+  function openDialog(d){
+    if (typeof d.showModal === "function") d.showModal();
+    syncBodyScrollLock();
+  }
+
+  allDialogs.forEach(function(d){ d.addEventListener("close", syncBodyScrollLock); });
+
   function openLightbox(productId, index){
     lightboxPhotos = PHOTOS[productId] || [];
     if (!lightboxPhotos[index]) return;
     lightboxIndex = index;
     renderLightbox();
-    if (typeof lightboxDialog.showModal === "function") lightboxDialog.showModal();
+    openDialog(lightboxDialog);
   }
 
   function renderLightbox(){
@@ -543,7 +559,7 @@
     panelAddBtn.textContent = editingIndex !== null ? "Salvar alterações" : "Adicionar";
     renderPanelBody();
     updatePanelTotal();
-    if (typeof panelDialog.showModal === "function") panelDialog.showModal();
+    openDialog(panelDialog);
   }
 
   function renderPanelBody(){
@@ -603,7 +619,7 @@
     editingIndex = null;
     panelDialog.close();
     renderCart();
-    cartDialog.showModal ? cartDialog.showModal() : null;
+    openDialog(cartDialog);
   });
 
   document.getElementById("panelClose").addEventListener("click", function(){ panelDialog.close(); });
@@ -651,7 +667,7 @@
     });
   }
 
-  cartFab.addEventListener("click", function(){ if (cartDialog.showModal) cartDialog.showModal(); });
+  cartFab.addEventListener("click", function(){ openDialog(cartDialog); });
   document.getElementById("cartClose").addEventListener("click", function(){ cartDialog.close(); });
   document.getElementById("cartAddMore").addEventListener("click", function(){ cartDialog.close(); });
   document.getElementById("cartClear").addEventListener("click", function(){
