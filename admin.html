@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Painel — Daniela Rodrigues Fotografia</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" href="favicon.png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --paper:#FFFFFF; --ink:#161616; --muted:#666666; --line:#DDDDDD;
+    --btn-bg:#161616; --btn-ink:#FFFFFF; --danger:#B3261E;
+  }
+  *{box-sizing:border-box;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    padding:20px; padding-bottom:80px; max-width:900px; margin-inline:auto;
+    font-size:15px; line-height:1.5;
+  }
+  h1,h2,h3{margin:0; font-weight:700;}
+  p{margin:0;}
+  button, input, textarea{font-family:inherit; -webkit-tap-highlight-color:transparent;}
+  button:focus, input:focus, textarea:focus{outline:none;}
+  input, textarea{
+    width:100%; border:1px solid var(--line); border-radius:4px; padding:8px 10px;
+    font-size:14px; color:var(--ink); background:var(--paper);
+  }
+  textarea{resize:vertical; min-height:64px;}
+  label{display:block; font-size:11.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--muted); margin-bottom:4px;}
+  .field{margin-bottom:12px;}
+  .btn{
+    appearance:none; border:1px solid var(--btn-bg); cursor:pointer; border-radius:4px;
+    padding:9px 16px; font-size:13.5px; font-weight:600; background:var(--btn-bg); color:var(--btn-ink);
+  }
+  .btn:active{opacity:.8;}
+  .btn-outline{background:transparent; color:var(--ink); border-color:var(--line);}
+  .btn-danger{background:var(--paper); color:var(--danger); border-color:var(--danger);}
+  .btn-sm{padding:5px 10px; font-size:12.5px;}
+
+  /* ---------- login ---------- */
+  #loginScreen{
+    min-height:80vh; display:flex; align-items:center; justify-content:center;
+  }
+  .login-box{width:min(90vw,340px); border:1px solid var(--line); border-radius:8px; padding:28px 24px;}
+  .login-box h1{font-size:18px; margin-bottom:4px;}
+  .login-box .sub{color:var(--muted); font-size:13px; margin-bottom:20px;}
+  .login-error{color:var(--danger); font-size:13px; margin-top:10px; min-height:18px;}
+
+  /* ---------- shell ---------- */
+  #panelScreen{display:none;}
+  header.top{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding-bottom:16px; margin-bottom:18px; border-bottom:1px solid var(--line);
+  }
+  header.top h1{font-size:18px;}
+  header.top .actions{display:flex; align-items:center; gap:10px;}
+  header.top a{color:var(--muted); font-size:13px; text-decoration:underline;}
+
+  .tabs{display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap;}
+  .tab-btn{
+    appearance:none; border:1px solid var(--line); background:var(--paper); color:var(--muted);
+    border-radius:20px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  .tab-btn.active{background:var(--btn-bg); color:var(--btn-ink); border-color:var(--btn-bg);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  .card{border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:16px;}
+  .card-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px;}
+  .card-head h3{font-size:15px;}
+  .row2{display:grid; grid-template-columns:1fr 140px; gap:12px;}
+  .row3{display:grid; grid-template-columns:1fr 100px 100px; gap:12px;}
+  @media (max-width:520px){ .row2, .row3{grid-template-columns:1fr;} }
+
+  .photo-grid{display:flex; flex-wrap:wrap; gap:10px; margin:10px 0;}
+  .photo-item{position:relative; width:84px; height:84px; border-radius:4px; overflow:hidden; border:1px solid var(--line);}
+  .photo-item img{width:100%; height:100%; object-fit:cover; display:block;}
+  .photo-item button{
+    position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%;
+    background:rgba(0,0,0,.65); color:#fff; border:none; font-size:12px; line-height:1; cursor:pointer;
+  }
+  .upload-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .upload-row input[type=file]{width:auto; border:none; padding:0; font-size:13px;}
+
+  .card-foot{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:14px; padding-top:12px; border-top:1px solid var(--line);}
+  .save-msg{font-size:12.5px; color:var(--muted); min-height:16px;}
+  .save-msg.ok{color:#1a7d34;}
+  .save-msg.err{color:var(--danger);}
+
+  .add-card{border:1px dashed var(--line); border-radius:8px; padding:16px; margin-bottom:16px;}
+  .muted{color:var(--muted); font-size:13px;}
+  #loadingNote{color:var(--muted); font-size:13px; padding:20px 0;}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <form class="login-box" id="loginForm">
+    <h1>Painel administrativo</h1>
+    <p class="sub">Daniela Rodrigues Fotografia</p>
+    <div class="field">
+      <label for="loginUser">Usuário</label>
+      <input id="loginUser" type="text" autocomplete="username" autocapitalize="off" autocorrect="off" required>
+    </div>
+    <div class="field">
+      <label for="loginPass">Senha</label>
+      <input id="loginPass" type="password" autocomplete="current-password" required>
+    </div>
+    <button class="btn" style="width:100%" type="submit">Entrar</button>
+    <p class="login-error" id="loginError"></p>
+  </form>
+</div>
+
+<div id="panelScreen">
+  <header class="top">
+    <h1>Painel administrativo</h1>
+    <div class="actions">
+      <a href="index.html" target="_blank">Ver site</a>
+      <button class="btn btn-outline btn-sm" id="logoutBtn" type="button">Sair</button>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="pacotes" type="button">Pacotes</button>
+    <button class="tab-btn" data-tab="adicionais" type="button">Adicionais</button>
+    <button class="tab-btn" data-tab="conta" type="button">Minha conta</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-pacotes">
+    <p id="loadingNote">Carregando pacotes…</p>
+    <div id="productsList"></div>
+    <div class="add-card">
+      <h3 style="font-size:14px; margin-bottom:10px;">+ Novo pacote</h3>
+      <div class="row2">
+        <div class="field">
+          <label for="newProdName">Nome do pacote</label>
+          <input id="newProdName" type="text" placeholder="Ex: Aniversário">
+        </div>
+        <div class="field">
+          <label for="newProdPrice">Preço (R$)</label>
+          <input id="newProdPrice" type="number" min="0" step="0.01" placeholder="0">
+        </div>
+      </div>
+      <button class="btn" id="addProductBtn" type="button">Adicionar pacote</button>
+      <p class="save-msg" id="addProductMsg"></p>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-adicionais">
+    <div id="addonsList"></div>
+    <div class="add-card">
+      <h3 style="font-size:14px; margin-bottom:10px;">+ Novo adicional</h3>
+      <div class="row3">
+        <div class="field">
+          <label for="newAddonName">Nome</label>
+          <input id="newAddonName" type="text" placeholder="Ex: Vídeo do ensaio">
+        </div>
+        <div class="field">
+          <label for="newAddonPrice">Preço (R$)</label>
+          <input id="newAddonPrice" type="number" min="0" step="0.01" placeholder="0">
+        </div>
+        <div class="field">
+          <label for="newAddonUnit">Unidade</label>
+          <input id="newAddonUnit" type="text" placeholder="un">
+        </div>
+      </div>
+      <button class="btn" id="addAddonBtn" type="button">Adicionar item</button>
+      <p class="save-msg" id="addAddonMsg"></p>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-conta">
+    <div class="card" style="max-width:360px;">
+      <h3 style="margin-bottom:14px;">Trocar senha</h3>
+      <div class="field">
+        <label for="newPassword">Nova senha</label>
+        <input id="newPassword" type="password" autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label for="confirmPassword">Confirmar nova senha</label>
+        <input id="confirmPassword" type="password" autocomplete="new-password">
+      </div>
+      <button class="btn" id="changePasswordBtn" type="button">Salvar nova senha</button>
+      <p class="save-msg" id="passwordMsg"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var SUPABASE_URL = "https://ofqlqacchctrthlzdjjd.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_zC18sfPpSslgmQmCklnIJA_ebkROdF0";
+  var USERNAME_DOMAIN = "@danielarodriguesfotografia.com";
+  var PHOTOS_BUCKET = "fotos";
+
+  var sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  var loginScreen = document.getElementById("loginScreen");
+  var panelScreen = document.getElementById("panelScreen");
+  var loginForm = document.getElementById("loginForm");
+  var loginError = document.getElementById("loginError");
+
+  function showLogin(){
+    loginScreen.style.display = "flex";
+    panelScreen.style.display = "none";
+  }
+
+  function showPanel(){
+    loginScreen.style.display = "none";
+    panelScreen.style.display = "block";
+    loadProducts();
+    loadAddons();
+  }
+
+  loginForm.addEventListener("submit", function(e){
+    e.preventDefault();
+    loginError.textContent = "";
+    var username = document.getElementById("loginUser").value.trim().toLowerCase();
+    var password = document.getElementById("loginPass").value;
+    if (!username || !password) return;
+    sbClient.auth.signInWithPassword({ email: username + USERNAME_DOMAIN, password: password })
+      .then(function(res){
+        if (res.error){ loginError.textContent = "Usuário ou senha inválidos."; return; }
+        showPanel();
+      });
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", function(){
+    sbClient.auth.signOut().then(showLogin);
+  });
+
+  sbClient.auth.getSession().then(function(res){
+    if (res.data.session) showPanel(); else showLogin();
+  });
+
+  // ---------- tabs ----------
+  document.querySelectorAll(".tab-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.remove("active"); });
+      document.querySelectorAll(".tab-panel").forEach(function(p){ p.classList.remove("active"); });
+      btn.classList.add("active");
+      document.getElementById("tab-"+btn.getAttribute("data-tab")).classList.add("active");
+    });
+  });
+
+  function money(v){
+    return Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+  }
+
+  function slugify(text){
+    return text.toString().toLowerCase()
+      .normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || ("item_"+Date.now());
+  }
+
+  // ================= PRODUTOS =================
+  var productsList = document.getElementById("productsList");
+  var loadingNote = document.getElementById("loadingNote");
+
+  function loadProducts(){
+    Promise.all([
+      sbClient.from("products").select("*").order("sort_order"),
+      sbClient.from("product_photos").select("*").order("position")
+    ]).then(function(results){
+      var products = results[0].data || [];
+      var photos = results[1].data || [];
+      loadingNote.style.display = "none";
+      renderProducts(products, photos);
+    });
+  }
+
+  function renderProducts(products, photos){
+    productsList.innerHTML = "";
+    products.forEach(function(p){
+      var photosForProduct = photos.filter(function(ph){ return ph.product_id === p.id; });
+      productsList.appendChild(buildProductCard(p, photosForProduct));
+    });
+  }
+
+  function buildProductCard(p, photosForProduct){
+    var card = document.createElement("div");
+    card.className = "card";
+
+    var head = document.createElement("div");
+    head.className = "card-head";
+    head.innerHTML = '<h3>'+p.name+'</h3>';
+    var delBtn = document.createElement("button");
+    delBtn.className = "btn btn-danger btn-sm";
+    delBtn.type = "button";
+    delBtn.textContent = "Excluir pacote";
+    delBtn.addEventListener("click", function(){
+      if (!confirm('Excluir o pacote "'+p.name+'"? Isso também remove as fotos dele.')) return;
+      sbClient.from("products").delete().eq("id", p.id).then(function(){ loadProducts(); });
+    });
+    head.appendChild(delBtn);
+    card.appendChild(head);
+
+    var row = document.createElement("div");
+    row.className = "row2";
+    row.innerHTML =
+      '<div class="field"><label>Nome</label><input type="text" data-field="name" value="'+escapeAttr(p.name)+'"></div>'+
+      '<div class="field"><label>Preço (R$)</label><input type="number" min="0" step="0.01" data-field="base_price" value="'+p.base_price+'"></div>';
+    card.appendChild(row);
+
+    var included = document.createElement("div");
+    included.className = "field";
+    included.innerHTML = '<label>Incluso no ensaio (1 item por linha)</label>'+
+      '<textarea data-field="included" rows="4">'+escapeHtml((p.included||[]).join("\n"))+'</textarea>';
+    card.appendChild(included);
+
+    var obs = document.createElement("div");
+    obs.className = "field";
+    obs.innerHTML = '<label>Observação (Obs)</label><textarea data-field="obs" rows="3">'+escapeHtml(p.obs||"")+'</textarea>';
+    card.appendChild(obs);
+
+    var photosField = document.createElement("div");
+    photosField.className = "field";
+    photosField.innerHTML = '<label>Fotos</label>';
+    var grid = document.createElement("div");
+    grid.className = "photo-grid";
+    photosForProduct.forEach(function(ph){
+      var item = document.createElement("div");
+      item.className = "photo-item";
+      item.innerHTML = '<img src="'+ph.url+'" alt="">';
+      var rm = document.createElement("button");
+      rm.type = "button";
+      rm.textContent = "×";
+      rm.addEventListener("click", function(){
+        if (!confirm("Remover esta foto?")) return;
+        sbClient.from("product_photos").delete().eq("id", ph.id).then(function(){ loadProducts(); });
+      });
+      item.appendChild(rm);
+      grid.appendChild(item);
+    });
+    photosField.appendChild(grid);
+
+    var uploadRow = document.createElement("div");
+    uploadRow.className = "upload-row";
+    var fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "image/*";
+    var uploadBtn = document.createElement("button");
+    uploadBtn.type = "button";
+    uploadBtn.className = "btn btn-outline btn-sm";
+    uploadBtn.textContent = "Enviar foto";
+    var uploadMsg = document.createElement("span");
+    uploadMsg.className = "muted";
+    uploadBtn.addEventListener("click", function(){
+      var file = fileInput.files[0];
+      if (!file) { uploadMsg.textContent = "Escolha um arquivo primeiro."; return; }
+      uploadMsg.textContent = "Enviando…";
+      var path = p.id + "/" + Date.now() + "-" + file.name.replace(/[^a-zA-Z0-9.\-]/g, "_");
+      sbClient.storage.from(PHOTOS_BUCKET).upload(path, file).then(function(res){
+        if (res.error){ uploadMsg.textContent = "Erro: "+res.error.message; return; }
+        var pub = sbClient.storage.from(PHOTOS_BUCKET).getPublicUrl(path);
+        var nextPos = photosForProduct.length ? Math.max.apply(null, photosForProduct.map(function(x){return x.position;})) + 1 : 1;
+        sbClient.from("product_photos").insert({ product_id: p.id, url: pub.data.publicUrl, position: nextPos }).then(function(){
+          loadProducts();
+        });
+      });
+    });
+    uploadRow.appendChild(fileInput);
+    uploadRow.appendChild(uploadBtn);
+    uploadRow.appendChild(uploadMsg);
+    photosField.appendChild(uploadRow);
+    card.appendChild(photosField);
+
+    var foot = document.createElement("div");
+    foot.className = "card-foot";
+    var saveBtn = document.createElement("button");
+    saveBtn.className = "btn";
+    saveBtn.type = "button";
+    saveBtn.textContent = "Salvar alterações";
+    var msg = document.createElement("p");
+    msg.className = "save-msg";
+    saveBtn.addEventListener("click", function(){
+      var name = card.querySelector('[data-field="name"]').value.trim();
+      var price = parseFloat(card.querySelector('[data-field="base_price"]').value) || 0;
+      var includedText = card.querySelector('[data-field="included"]').value;
+      var includedArr = includedText.split("\n").map(function(s){ return s.trim(); }).filter(Boolean);
+      var obsText = card.querySelector('[data-field="obs"]').value.trim();
+      msg.className = "save-msg";
+      msg.textContent = "Salvando…";
+      sbClient.from("products").update({
+        name: name, base_price: price, included: includedArr, obs: obsText
+      }).eq("id", p.id).then(function(res){
+        if (res.error){ msg.className = "save-msg err"; msg.textContent = "Erro ao salvar: "+res.error.message; return; }
+        msg.className = "save-msg ok"; msg.textContent = "Salvo!";
+        head.querySelector("h3").textContent = name;
+        setTimeout(function(){ msg.textContent = ""; }, 2500);
+      });
+    });
+    foot.appendChild(saveBtn);
+    foot.appendChild(msg);
+    card.appendChild(foot);
+
+    return card;
+  }
+
+  document.getElementById("addProductBtn").addEventListener("click", function(){
+    var msg = document.getElementById("addProductMsg");
+    var name = document.getElementById("newProdName").value.trim();
+    var price = parseFloat(document.getElementById("newProdPrice").value) || 0;
+    if (!name){ msg.className = "save-msg err"; msg.textContent = "Digite um nome para o pacote."; return; }
+    var id = slugify(name);
+    sbClient.from("products").select("id").then(function(res){
+      var maxOrder = (res.data||[]).length;
+      sbClient.from("products").insert({
+        id: id, name: name, base_photos: 5, base_price: price, included: [], obs: "", sort_order: maxOrder + 1
+      }).then(function(r2){
+        if (r2.error){ msg.className = "save-msg err"; msg.textContent = "Erro: "+r2.error.message; return; }
+        msg.className = "save-msg ok"; msg.textContent = "Pacote adicionado!";
+        document.getElementById("newProdName").value = "";
+        document.getElementById("newProdPrice").value = "";
+        loadProducts();
+        setTimeout(function(){ msg.textContent = ""; }, 2500);
+      });
+    });
+  });
+
+  // ================= ADICIONAIS =================
+  var addonsList = document.getElementById("addonsList");
+
+  function loadAddons(){
+    sbClient.from("addons").select("*").order("sort_order").then(function(res){
+      renderAddons(res.data || []);
+    });
+  }
+
+  function renderAddons(addons){
+    addonsList.innerHTML = "";
+    addons.forEach(function(a){
+      addonsList.appendChild(buildAddonRow(a));
+    });
+  }
+
+  function buildAddonRow(a){
+    var card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML =
+      '<div class="row3">'+
+        '<div class="field"><label>Nome</label><input type="text" data-field="name" value="'+escapeAttr(a.name)+'"></div>'+
+        '<div class="field"><label>Preço (R$)</label><input type="number" min="0" step="0.01" data-field="price" value="'+a.price+'"></div>'+
+        '<div class="field"><label>Unidade</label><input type="text" data-field="unit" value="'+escapeAttr(a.unit)+'"></div>'+
+      '</div>';
+
+    var foot = document.createElement("div");
+    foot.className = "card-foot";
+    var saveBtn = document.createElement("button");
+    saveBtn.className = "btn"; saveBtn.type = "button"; saveBtn.textContent = "Salvar";
+    var delBtn = document.createElement("button");
+    delBtn.className = "btn btn-danger btn-sm"; delBtn.type = "button"; delBtn.textContent = "Excluir";
+    var msg = document.createElement("p");
+    msg.className = "save-msg";
+
+    saveBtn.addEventListener("click", function(){
+      var name = card.querySelector('[data-field="name"]').value.trim();
+      var price = parseFloat(card.querySelector('[data-field="price"]').value) || 0;
+      var unit = card.querySelector('[data-field="unit"]').value.trim() || "un";
+      msg.textContent = "Salvando…"; msg.className = "save-msg";
+      sbClient.from("addons").update({ name: name, price: price, unit: unit }).eq("id", a.id).then(function(res){
+        if (res.error){ msg.className = "save-msg err"; msg.textContent = "Erro: "+res.error.message; return; }
+        msg.className = "save-msg ok"; msg.textContent = "Salvo!";
+        setTimeout(function(){ msg.textContent = ""; }, 2500);
+      });
+    });
+    delBtn.addEventListener("click", function(){
+      if (!confirm('Excluir o adicional "'+a.name+'"?')) return;
+      sbClient.from("addons").delete().eq("id", a.id).then(function(){ loadAddons(); });
+    });
+
+    var actions = document.createElement("div");
+    actions.style.display = "flex";
+    actions.style.gap = "10px";
+    actions.appendChild(saveBtn);
+    actions.appendChild(delBtn);
+
+    foot.appendChild(actions);
+    foot.appendChild(msg);
+    card.appendChild(foot);
+    return card;
+  }
+
+  document.getElementById("addAddonBtn").addEventListener("click", function(){
+    var msg = document.getElementById("addAddonMsg");
+    var name = document.getElementById("newAddonName").value.trim();
+    var price = parseFloat(document.getElementById("newAddonPrice").value) || 0;
+    var unit = document.getElementById("newAddonUnit").value.trim() || "un";
+    if (!name){ msg.className = "save-msg err"; msg.textContent = "Digite um nome."; return; }
+    var id = slugify(name);
+    sbClient.from("addons").select("id").then(function(res){
+      var maxOrder = (res.data||[]).length;
+      sbClient.from("addons").insert({ id:id, name:name, price:price, unit:unit, sort_order:maxOrder+1 }).then(function(r2){
+        if (r2.error){ msg.className = "save-msg err"; msg.textContent = "Erro: "+r2.error.message; return; }
+        msg.className = "save-msg ok"; msg.textContent = "Adicionado!";
+        document.getElementById("newAddonName").value = "";
+        document.getElementById("newAddonPrice").value = "";
+        document.getElementById("newAddonUnit").value = "";
+        loadAddons();
+        setTimeout(function(){ msg.textContent = ""; }, 2500);
+      });
+    });
+  });
+
+  // ================= CONTA =================
+  document.getElementById("changePasswordBtn").addEventListener("click", function(){
+    var msg = document.getElementById("passwordMsg");
+    var p1 = document.getElementById("newPassword").value;
+    var p2 = document.getElementById("confirmPassword").value;
+    if (p1.length < 6){ msg.className = "save-msg err"; msg.textContent = "A senha precisa ter pelo menos 6 caracteres."; return; }
+    if (p1 !== p2){ msg.className = "save-msg err"; msg.textContent = "As senhas não coincidem."; return; }
+    msg.className = "save-msg"; msg.textContent = "Salvando…";
+    sbClient.auth.updateUser({ password: p1 }).then(function(res){
+      if (res.error){ msg.className = "save-msg err"; msg.textContent = "Erro: "+res.error.message; return; }
+      msg.className = "save-msg ok"; msg.textContent = "Senha alterada com sucesso!";
+      document.getElementById("newPassword").value = "";
+      document.getElementById("confirmPassword").value = "";
+    });
+  });
+
+  // ================= util =================
+  function escapeHtml(s){
+    return String(s).replace(/[&<>]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c]; });
+  }
+  function escapeAttr(s){
+    return escapeHtml(s).replace(/"/g, "&quot;");
+  }
+})();
+</script>
+</body>
+</html>

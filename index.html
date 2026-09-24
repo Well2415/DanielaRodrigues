@@ -11,6 +11,7 @@
 <meta property="og:title" content="Monte seu Ensaio — Daniela Rodrigues Fotografia">
 <meta property="og:description" content="Escolha o ensaio, ajuste os adicionais e envie o pedido pelo WhatsApp para combinarmos a data.">
 <meta property="og:image" content="fotos/newborn-2.jpg">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --paper:#FFFFFF;
@@ -329,19 +330,12 @@
   var LOGO_URL = "fotos/logo.png";
   // =============================================
 
-  // ======= EDITE AQUI: fotos =======
-  // Troque cada placeholder por uma foto real. Duas formas:
-  // 1) Link direto de uma imagem: PHOTOS.newborn = ["https://.../foto1.jpg", "https://.../foto2.jpg", "https://.../foto3.jpg"];
-  // 2) Foto do computador: some com <img> no lugar do placeholder (peça ajuda se preferir).
-  var PHOTOS = {
-    newborn:   ["fotos/newborn-1.jpg", "fotos/newborn-2.jpg", "fotos/newborn-3.jpg", "fotos/newborn-4.jpg", "fotos/newborn-5.jpg"],
-    gestante:  ["fotos/gestante-1.jpg", "fotos/gestante-2.jpg", "fotos/gestante-3.jpg", "fotos/gestante-4.jpg", "fotos/gestante-5.jpg"],
-    infantil:  ["fotos/infantil-1.jpg", "fotos/infantil-2.jpg", "fotos/infantil-3.jpg", "fotos/infantil-4.jpg", "fotos/infantil-5.jpg", "fotos/infantil-6.jpg", "fotos/infantil-7.jpg", "fotos/infantil-8.jpg"],
-    smash:     ["fotos/smash-1.jpg", "fotos/smash-2.jpg", "fotos/smash-3.jpg", "fotos/smash-4.jpg", "fotos/smash-5.jpg", "fotos/smash-6.jpg", "fotos/smash-7.jpg", "fotos/smash-8.jpg"],
-    familia:   ["fotos/familia-1.jpg", "fotos/familia-2.jpg", "fotos/familia-3.jpg"],
-    revelacao: ["fotos/revelacao-1.jpg", "fotos/revelacao-2.jpg"]
-  };
-  // ===================================
+  // Pacotes, adicionais e fotos agora vêm do Supabase (editáveis pelo admin.html)
+  var SUPABASE_URL = "https://ofqlqacchctrthlzdjjd.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_zC18sfPpSslgmQmCklnIJA_ebkROdF0";
+  var sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  var PHOTOS = {};
 
   function cameraIcon(){
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2.2"/><path d="M8 7l1.6-2.4h4.8L16 7"/><circle cx="12" cy="13.2" r="3.4"/></svg>';
@@ -352,51 +346,31 @@
     return url ? '<img src="'+url+'" alt="" loading="lazy">' : cameraIcon();
   }
 
-  var ADDONS = [
-    {id:"foto",          name:"Foto extra digital",          price:40,  unit:"foto"},
-    {id:"impressao1015", name:"Impressão 10×15",             price:3,   unit:"un"},
-    {id:"impressao1521", name:"Impressão 15×21",             price:5,   unit:"un"},
-    {id:"retrato1015",   name:"Porta-retrato 10×15",         price:20,  unit:"un"},
-    {id:"retrato1521",   name:"Porta-retrato 15×21",         price:30,  unit:"un"},
-    {id:"album1521",     name:"Álbum 15×21 · 10 páginas",    price:150, unit:"un"},
-    {id:"album2020",     name:"Álbum 20×20 · 10 páginas",    price:200, unit:"un"},
-    {id:"caneca",        name:"Caneca personalizada",        price:45,  unit:"un"}
-  ];
+  var ADDONS = [];
+  var PRODUCTS = [];
 
-  var PRODUCT_OBS_PRODUCAO = "A Cada 5 fotos adicionais, será permitido mais 1 produção, limite máximo de 3 produções por ensaio. Para fotos adicionais não tem limite.";
-
-  var PRODUCTS = [
-    {
-      id:"newborn", name:"Newborn", basePhotos:5, basePrice:400,
-      included:["5 Fotos Digitais","1 produção (cenário) com o bebê","Participação dos pais e irmãos (se tiver)"],
-      obs:"A Cada 5 fotos adicionais, acrescentamos mais 1 produção, limite máximo de 3 produções por ensaio. Para fotos adicionais não tem limite."
-    },
-    {
-      id:"gestante", name:"Gestante", basePhotos:5, basePrice:300,
-      included:["5 Fotos Digitais","Poderá trazer para usar uma produção (roupas / acessórios)","Participação do parceiro"],
-      obs:PRODUCT_OBS_PRODUCAO
-    },
-    {
-      id:"infantil", name:"Infantil", basePhotos:5, basePrice:250,
-      included:["5 Fotos Digitais","1 produção (cenário) com a criança","Participação dos pais e irmãos (se tiver)"],
-      obs:"A Cada 5 fotos adicionais, acrescentamos mais 1 produção, limite máximo de 3 produções por ensaio. Para fotos adicionais não tem limite."
-    },
-    {
-      id:"smash", name:"Smash the Cake", basePhotos:5, basePrice:400,
-      included:["5 Fotos Digitais","1 produção (cenário com balões)","Bolo (glacê ou frutas)","Participação dos pais e irmãos (se tiver)"],
-      obs:"no acréscimo de 5 fotos adicionais, acrescentamos mais 1 produção com o banho na banheira. Para fotos adicionais não tem limite."
-    },
-    {
-      id:"familia", name:"Família", basePhotos:5, basePrice:300,
-      included:["5 Fotos Digitais","Poderá trazer para usar uma produção (roupas / acessórios)"],
-      obs:PRODUCT_OBS_PRODUCAO
-    },
-    {
-      id:"revelacao", name:"Revelação de sexo", basePhotos:5, basePrice:250,
-      included:["5 Fotos Digitais","Poderá trazer para usar uma produção (roupas / acessórios, tinta, balões, confetes, outros)","Participação do parceiro"],
-      obs:PRODUCT_OBS_PRODUCAO
-    }
-  ];
+  function loadCatalog(){
+    return Promise.all([
+      sbClient.from("products").select("*").order("sort_order"),
+      sbClient.from("addons").select("*").order("sort_order"),
+      sbClient.from("product_photos").select("*").order("position")
+    ]).then(function(results){
+      PRODUCTS = (results[0].data || []).map(function(row){
+        return {
+          id: row.id, name: row.name, basePhotos: row.base_photos, basePrice: Number(row.base_price),
+          included: row.included || [], obs: row.obs || ""
+        };
+      });
+      ADDONS = (results[1].data || []).map(function(row){
+        return { id: row.id, name: row.name, price: Number(row.price), unit: row.unit };
+      });
+      PHOTOS = {};
+      (results[2].data || []).forEach(function(row){
+        if (!PHOTOS[row.product_id]) PHOTOS[row.product_id] = [];
+        PHOTOS[row.product_id].push(row.url);
+      });
+    });
+  }
 
   function money(v){
     return v.toLocaleString("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits: v%1===0?0:2});
@@ -728,8 +702,13 @@
     logoSlot.title = "Espaço reservado para a logo";
   }
 
-  renderGrid();
-  renderCart();
+  grid.innerHTML = '<p style="color:var(--muted); padding:20px 0;">Carregando pacotes…</p>';
+  loadCatalog().then(function(){
+    renderGrid();
+    renderCart();
+  }).catch(function(){
+    grid.innerHTML = '<p style="color:var(--muted); padding:20px 0;">Não foi possível carregar os pacotes agora. Recarregue a página.</p>';
+  });
 })();
 </script>
 </body>
