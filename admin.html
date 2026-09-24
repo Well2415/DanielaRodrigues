@@ -120,6 +120,16 @@
   .muted{color:var(--muted); font-size:13px;}
   #loadingNote{color:var(--muted); font-size:13px; padding:20px 0;}
 
+  #toast{
+    position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(16px);
+    background:var(--btn-bg); color:var(--btn-ink); padding:12px 22px; border-radius:8px;
+    font-size:13.5px; font-weight:600; box-shadow:0 6px 20px rgba(0,0,0,.22);
+    opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease;
+    z-index:1000; max-width:90vw; text-align:center;
+  }
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  #toast.err{background:var(--danger);}
+
   @media (max-width:600px){
     body{padding:14px; padding-bottom:32px;}
     .card, .add-card{padding:14px; border-radius:8px;}
@@ -238,6 +248,8 @@
   </div>
 </div>
 
+<div id="toast" role="status" aria-live="polite"></div>
+
 <script>
 (function(){
   "use strict";
@@ -251,6 +263,15 @@
 
   document.getElementById("copyrightText").textContent =
     "© " + new Date().getFullYear() + " Daniela Rodrigues Fotografia — Todos os direitos reservados.";
+
+  var toastEl = document.getElementById("toast");
+  var toastTimer = null;
+  function showToast(message, isError){
+    clearTimeout(toastTimer);
+    toastEl.textContent = message;
+    toastEl.className = isError ? "show err" : "show";
+    toastTimer = setTimeout(function(){ toastEl.className = ""; }, 3200);
+  }
 
   var loginScreen = document.getElementById("loginScreen");
   var panelScreen = document.getElementById("panelScreen");
@@ -319,9 +340,11 @@
       sbClient.from("products").select("*").order("sort_order"),
       sbClient.from("product_photos").select("*").order("position")
     ]).then(function(results){
+      loadingNote.style.display = "none";
+      var err = results[0].error || results[1].error;
+      if (err){ showToast("Erro ao carregar pacotes: "+err.message, true); return; }
       var products = results[0].data || [];
       var photos = results[1].data || [];
-      loadingNote.style.display = "none";
       renderProducts(products, photos);
     });
   }
@@ -347,7 +370,11 @@
     delBtn.textContent = "Excluir pacote";
     delBtn.addEventListener("click", function(){
       if (!confirm('Excluir o pacote "'+p.name+'"? Isso também remove as fotos dele.')) return;
-      sbClient.from("products").delete().eq("id", p.id).then(function(){ loadProducts(); });
+      sbClient.from("products").delete().eq("id", p.id).then(function(res){
+        if (res.error){ showToast("Erro ao excluir: "+res.error.message, true); return; }
+        showToast('Pacote "'+p.name+'" excluído.');
+        loadProducts();
+      });
     });
     head.appendChild(delBtn);
     card.appendChild(head);
@@ -384,7 +411,11 @@
       rm.textContent = "×";
       rm.addEventListener("click", function(){
         if (!confirm("Remover esta foto?")) return;
-        sbClient.from("product_photos").delete().eq("id", ph.id).then(function(){ loadProducts(); });
+        sbClient.from("product_photos").delete().eq("id", ph.id).then(function(res){
+          if (res.error){ showToast("Erro ao remover foto: "+res.error.message, true); return; }
+          showToast("Foto removida.");
+          loadProducts();
+        });
       });
       item.appendChild(rm);
       grid.appendChild(item);
@@ -406,12 +437,25 @@
       var file = fileInput.files[0];
       if (!file) { uploadMsg.textContent = "Escolha um arquivo primeiro."; return; }
       uploadMsg.textContent = "Enviando…";
+      uploadBtn.disabled = true;
       var path = p.id + "/" + Date.now() + "-" + file.name.replace(/[^a-zA-Z0-9.\-]/g, "_");
       sbClient.storage.from(PHOTOS_BUCKET).upload(path, file).then(function(res){
-        if (res.error){ uploadMsg.textContent = "Erro: "+res.error.message; return; }
+        if (res.error){
+          uploadBtn.disabled = false;
+          uploadMsg.textContent = "Erro: "+res.error.message;
+          showToast("Erro ao enviar foto: "+res.error.message, true);
+          return;
+        }
         var pub = sbClient.storage.from(PHOTOS_BUCKET).getPublicUrl(path);
         var nextPos = photosForProduct.length ? Math.max.apply(null, photosForProduct.map(function(x){return x.position;})) + 1 : 1;
-        sbClient.from("product_photos").insert({ product_id: p.id, url: pub.data.publicUrl, position: nextPos }).then(function(){
+        sbClient.from("product_photos").insert({ product_id: p.id, url: pub.data.publicUrl, position: nextPos }).then(function(r2){
+          if (r2.error){
+            uploadBtn.disabled = false;
+            uploadMsg.textContent = "Erro: "+r2.error.message;
+            showToast("Erro ao salvar foto: "+r2.error.message, true);
+            return;
+          }
+          showToast("Foto enviada!");
           loadProducts();
         });
       });
@@ -441,10 +485,11 @@
       sbClient.from("products").update({
         name: name, base_price: price, included: includedArr, obs: obsText
       }).eq("id", p.id).then(function(res){
-        if (res.error){ msg.className = "save-msg err"; msg.textContent = "Erro ao salvar: "+res.error.message; return; }
+        if (res.error){ msg.className = "save-msg err"; msg.textContent = "Erro ao salvar: "+res.error.message; showToast("Erro ao salvar pacote: "+res.error.message, true); return; }
         msg.className = "save-msg ok"; msg.textContent = "Salvo!";
         head.querySelector("h3").textContent = name;
-        setTimeout(function(){ msg.textContent = ""; }, 2500);
+        showToast('Pacote "'+name+'" salvo!');
+        setTimeout(function(){ msg.textContent = ""; }, 3200);
       });
     });
     foot.appendChild(saveBtn);
@@ -458,19 +503,21 @@
     var msg = document.getElementById("addProductMsg");
     var name = document.getElementById("newProdName").value.trim();
     var price = parseFloat(document.getElementById("newProdPrice").value) || 0;
-    if (!name){ msg.className = "save-msg err"; msg.textContent = "Digite um nome para o pacote."; return; }
+    if (!name){ msg.className = "save-msg err"; msg.textContent = "Digite um nome para o pacote."; showToast("Digite um nome para o pacote.", true); return; }
     var id = slugify(name);
+    msg.className = "save-msg"; msg.textContent = "Adicionando…";
     sbClient.from("products").select("id").then(function(res){
       var maxOrder = (res.data||[]).length;
       sbClient.from("products").insert({
         id: id, name: name, base_photos: 5, base_price: price, included: [], obs: "", sort_order: maxOrder + 1
       }).then(function(r2){
-        if (r2.error){ msg.className = "save-msg err"; msg.textContent = "Erro: "+r2.error.message; return; }
+        if (r2.error){ msg.className = "save-msg err"; msg.textContent = "Erro: "+r2.error.message; showToast("Erro ao adicionar pacote: "+r2.error.message, true); return; }
         msg.className = "save-msg ok"; msg.textContent = "Pacote adicionado!";
+        showToast('Pacote "'+name+'" adicionado!');
         document.getElementById("newProdName").value = "";
         document.getElementById("newProdPrice").value = "";
         loadProducts();
-        setTimeout(function(){ msg.textContent = ""; }, 2500);
+        setTimeout(function(){ msg.textContent = ""; }, 3200);
       });
     });
   });
@@ -480,6 +527,7 @@
 
   function loadAddons(){
     sbClient.from("addons").select("*").order("sort_order").then(function(res){
+      if (res.error){ showToast("Erro ao carregar adicionais: "+res.error.message, true); return; }
       renderAddons(res.data || []);
     });
   }
@@ -516,14 +564,19 @@
       var unit = card.querySelector('[data-field="unit"]').value.trim() || "un";
       msg.textContent = "Salvando…"; msg.className = "save-msg";
       sbClient.from("addons").update({ name: name, price: price, unit: unit }).eq("id", a.id).then(function(res){
-        if (res.error){ msg.className = "save-msg err"; msg.textContent = "Erro: "+res.error.message; return; }
+        if (res.error){ msg.className = "save-msg err"; msg.textContent = "Erro: "+res.error.message; showToast("Erro ao salvar adicional: "+res.error.message, true); return; }
         msg.className = "save-msg ok"; msg.textContent = "Salvo!";
-        setTimeout(function(){ msg.textContent = ""; }, 2500);
+        showToast('Adicional "'+name+'" salvo!');
+        setTimeout(function(){ msg.textContent = ""; }, 3200);
       });
     });
     delBtn.addEventListener("click", function(){
       if (!confirm('Excluir o adicional "'+a.name+'"?')) return;
-      sbClient.from("addons").delete().eq("id", a.id).then(function(){ loadAddons(); });
+      sbClient.from("addons").delete().eq("id", a.id).then(function(res){
+        if (res.error){ showToast("Erro ao excluir: "+res.error.message, true); return; }
+        showToast('Adicional "'+a.name+'" excluído.');
+        loadAddons();
+      });
     });
 
     var actions = document.createElement("div");
@@ -543,18 +596,20 @@
     var name = document.getElementById("newAddonName").value.trim();
     var price = parseFloat(document.getElementById("newAddonPrice").value) || 0;
     var unit = document.getElementById("newAddonUnit").value.trim() || "un";
-    if (!name){ msg.className = "save-msg err"; msg.textContent = "Digite um nome."; return; }
+    if (!name){ msg.className = "save-msg err"; msg.textContent = "Digite um nome."; showToast("Digite um nome para o adicional.", true); return; }
     var id = slugify(name);
+    msg.className = "save-msg"; msg.textContent = "Adicionando…";
     sbClient.from("addons").select("id").then(function(res){
       var maxOrder = (res.data||[]).length;
       sbClient.from("addons").insert({ id:id, name:name, price:price, unit:unit, sort_order:maxOrder+1 }).then(function(r2){
-        if (r2.error){ msg.className = "save-msg err"; msg.textContent = "Erro: "+r2.error.message; return; }
+        if (r2.error){ msg.className = "save-msg err"; msg.textContent = "Erro: "+r2.error.message; showToast("Erro ao adicionar item: "+r2.error.message, true); return; }
         msg.className = "save-msg ok"; msg.textContent = "Adicionado!";
+        showToast('"'+name+'" adicionado aos adicionais!');
         document.getElementById("newAddonName").value = "";
         document.getElementById("newAddonPrice").value = "";
         document.getElementById("newAddonUnit").value = "";
         loadAddons();
-        setTimeout(function(){ msg.textContent = ""; }, 2500);
+        setTimeout(function(){ msg.textContent = ""; }, 3200);
       });
     });
   });
@@ -564,12 +619,13 @@
     var msg = document.getElementById("passwordMsg");
     var p1 = document.getElementById("newPassword").value;
     var p2 = document.getElementById("confirmPassword").value;
-    if (p1.length < 6){ msg.className = "save-msg err"; msg.textContent = "A senha precisa ter pelo menos 6 caracteres."; return; }
-    if (p1 !== p2){ msg.className = "save-msg err"; msg.textContent = "As senhas não coincidem."; return; }
+    if (p1.length < 6){ msg.className = "save-msg err"; msg.textContent = "A senha precisa ter pelo menos 6 caracteres."; showToast("A senha precisa ter pelo menos 6 caracteres.", true); return; }
+    if (p1 !== p2){ msg.className = "save-msg err"; msg.textContent = "As senhas não coincidem."; showToast("As senhas não coincidem.", true); return; }
     msg.className = "save-msg"; msg.textContent = "Salvando…";
     sbClient.auth.updateUser({ password: p1 }).then(function(res){
-      if (res.error){ msg.className = "save-msg err"; msg.textContent = "Erro: "+res.error.message; return; }
+      if (res.error){ msg.className = "save-msg err"; msg.textContent = "Erro: "+res.error.message; showToast("Erro ao trocar senha: "+res.error.message, true); return; }
       msg.className = "save-msg ok"; msg.textContent = "Senha alterada com sucesso!";
+      showToast("Senha alterada com sucesso!");
       document.getElementById("newPassword").value = "";
       document.getElementById("confirmPassword").value = "";
     });
