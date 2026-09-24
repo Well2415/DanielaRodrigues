@@ -85,7 +85,6 @@
   .item-main{flex:1; min-width:0;}
   .item-main h2{font-size:16px;}
   .item-main .desc{color:var(--muted); font-size:13.5px; margin-top:3px;}
-  .item-main .meta{color:var(--muted); font-size:12.5px; margin-top:6px;}
   .item-side{display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex-shrink:0;}
   .item-side .price{font-weight:700; font-size:15px; white-space:nowrap;}
 
@@ -454,8 +453,7 @@
         '</div>'+
         '<div class="item-main">'+
           '<h2>'+p.name+'</h2>'+
-          '<p class="desc">'+p.obs+'</p>'+
-          '<p class="meta">'+p.basePhotos+' fotos digitais</p>'+
+          '<p class="desc">'+p.included.join(" · ")+'</p>'+
         '</div>'+
         '<div class="item-side">'+
           '<span class="price">'+money(p.basePrice)+'</span>'+
