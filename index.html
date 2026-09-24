@@ -348,28 +348,64 @@
 
   var ADDONS = [];
   var PRODUCTS = [];
+  var CATALOG_CACHE_KEY = "danielaFotografia.catalogCache.v1";
 
-  function loadCatalog(){
+  function applyCatalog(data){
+    PRODUCTS = data.products;
+    ADDONS = data.addons;
+    PHOTOS = data.photos;
+  }
+
+  function fetchCatalog(){
     return Promise.all([
-      sbClient.from("products").select("*").order("sort_order"),
-      sbClient.from("addons").select("*").order("sort_order"),
-      sbClient.from("product_photos").select("*").order("position")
+      sbClient.from("products")
+        .select("*, product_photos(url, position)")
+        .order("sort_order")
+        .order("position", { foreignTable: "product_photos" }),
+      sbClient.from("addons").select("*").order("sort_order")
     ]).then(function(results){
-      PRODUCTS = (results[0].data || []).map(function(row){
+      if (results[0].error) throw results[0].error;
+      if (results[1].error) throw results[1].error;
+      var productsRaw = results[0].data || [];
+      var products = productsRaw.map(function(row){
         return {
           id: row.id, name: row.name, basePhotos: row.base_photos, basePrice: Number(row.base_price),
           included: row.included || [], obs: row.obs || ""
         };
       });
-      ADDONS = (results[1].data || []).map(function(row){
+      var addons = (results[1].data || []).map(function(row){
         return { id: row.id, name: row.name, price: Number(row.price), unit: row.unit };
       });
-      PHOTOS = {};
-      (results[2].data || []).forEach(function(row){
-        if (!PHOTOS[row.product_id]) PHOTOS[row.product_id] = [];
-        PHOTOS[row.product_id].push(row.url);
+      var photos = {};
+      productsRaw.forEach(function(row){
+        photos[row.id] = (row.product_photos || []).map(function(p){ return p.url; });
       });
+      return { products: products, addons: addons, photos: photos };
     });
+  }
+
+  // Mostra o catálogo salvo em cache instantaneamente (se houver) enquanto
+  // busca dados atualizados em segundo plano — evita a espera a cada visita.
+  function loadCatalog(onRender){
+    var cachedRaw = null;
+    try { cachedRaw = localStorage.getItem(CATALOG_CACHE_KEY); } catch (e) {}
+
+    var usedCache = false;
+    if (cachedRaw){
+      try { applyCatalog(JSON.parse(cachedRaw)); usedCache = true; } catch (e) {}
+    }
+    if (usedCache) onRender();
+
+    var fresh = fetchCatalog().then(function(data){
+      var freshRaw = JSON.stringify(data);
+      if (freshRaw !== cachedRaw){
+        applyCatalog(data);
+        try { localStorage.setItem(CATALOG_CACHE_KEY, freshRaw); } catch (e) {}
+        onRender();
+      }
+    });
+
+    return usedCache ? fresh.catch(function(){}) : fresh;
   }
 
   function money(v){
@@ -703,11 +739,13 @@
   }
 
   grid.innerHTML = '<p style="color:var(--muted); padding:20px 0;">Carregando pacotes…</p>';
-  loadCatalog().then(function(){
+  loadCatalog(function(){
     renderGrid();
     renderCart();
   }).catch(function(){
-    grid.innerHTML = '<p style="color:var(--muted); padding:20px 0;">Não foi possível carregar os pacotes agora. Recarregue a página.</p>';
+    if (!PRODUCTS.length){
+      grid.innerHTML = '<p style="color:var(--muted); padding:20px 0;">Não foi possível carregar os pacotes agora. Recarregue a página.</p>';
+    }
   });
 })();
 </script>
