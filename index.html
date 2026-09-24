@@ -369,37 +369,31 @@
   var PRODUCTS = [
     {
       id:"newborn", name:"Newborn", basePhotos:5, basePrice:400,
-      desc:"Sessão em estúdio com props e 1 produção temática para o bebê.",
       included:["5 Fotos Digitais","1 produção (cenário) com o bebê","Participação dos pais e irmãos (se tiver)"],
       obs:"A cada 5 fotos adicionais, acrescentamos mais 1 produção, limite máximo de 3 produções por ensaio. Para fotos adicionais não tem limite."
     },
     {
       id:"gestante", name:"Gestante", basePhotos:5, basePrice:300,
-      desc:"Estúdio ou externa, com participação do parceiro e produção própria.",
       included:["5 Fotos Digitais","Poderá trazer para usar uma produção (roupas / acessórios)","Participação do parceiro"],
       obs:PRODUCT_OBS_PRODUCAO
     },
     {
       id:"infantil", name:"Infantil", basePhotos:5, basePrice:250,
-      desc:"Sessão leve e lúdica, no ritmo da criança, com cenário temático.",
       included:["5 Fotos Digitais","1 produção (cenário) com a criança","Participação dos pais e irmãos (se tiver)"],
       obs:"A cada 5 fotos adicionais, acrescentamos mais 1 produção, limite máximo de 3 produções por ensaio. Para fotos adicionais não tem limite."
     },
     {
       id:"smash", name:"Smash the Cake", basePhotos:5, basePrice:400,
-      desc:"Ensaio de 1 aninho com bolo cenográfico e banho de banheira.",
       included:["5 Fotos Digitais","1 produção (cenário com balões)","Bolo (glacê ou frutas)","Participação dos pais e irmãos (se tiver)"],
       obs:"No acréscimo de 5 fotos adicionais, acrescentamos mais 1 produção com o banho na banheira. Para fotos adicionais não tem limite."
     },
     {
       id:"familia", name:"Família", basePhotos:5, basePrice:300,
-      desc:"Sessão em estúdio para reunir todos, com produção própria.",
       included:["5 Fotos Digitais","Poderá trazer para usar uma produção (roupas / acessórios)"],
       obs:PRODUCT_OBS_PRODUCAO
     },
     {
       id:"revelacao", name:"Revelação de sexo", basePhotos:5, basePrice:250,
-      desc:"Momento especial em estúdio, com balões, confetes e purpurina.",
       included:["5 Fotos Digitais","Poderá trazer para usar uma produção (roupas / acessórios, tinta, balões, confetes, outros)","Participação do parceiro"],
       obs:PRODUCT_OBS_PRODUCAO
     }
@@ -460,7 +454,7 @@
         '</div>'+
         '<div class="item-main">'+
           '<h2>'+p.name+'</h2>'+
-          '<p class="desc">'+p.desc+'</p>'+
+          '<p class="desc">'+p.included.slice(1).join(" · ")+'</p>'+
           '<p class="meta">'+p.basePhotos+' fotos digitais</p>'+
         '</div>'+
         '<div class="item-side">'+
@@ -470,7 +464,12 @@
       '</div>';
     }).join("");
     grid.querySelectorAll("[data-open]").forEach(function(btn){
-      btn.addEventListener("click", function(){ openPanel(btn.getAttribute("data-open"), null); });
+      btn.addEventListener("click", function(){
+        var pid = btn.getAttribute("data-open");
+        var existingIndex = -1;
+        cart.forEach(function(item, idx){ if (item.productId === pid) existingIndex = idx; });
+        openPanel(pid, existingIndex >= 0 ? existingIndex : null);
+      });
     });
     grid.querySelectorAll("[data-gallery]").forEach(function(btn){
       btn.addEventListener("click", function(){ openGallery(btn.getAttribute("data-gallery")); });
